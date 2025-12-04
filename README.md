@@ -1,4 +1,4 @@
-# Face Attendance Console
+# FaceID-Attendance-App
 
 Modernized Tkinter desktop console for capturing, reviewing, and managing face-recognition attendance sessions. The project is split into clear frontend, backend, and automation layers so each responsibility can evolve independently.
 
