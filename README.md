@@ -20,28 +20,6 @@ Modernized Tkinter desktop console for capturing, reviewing, and managing face-r
 ## Overview
 The app combines OpenCV (Haar Cascade + LBPH) with a Tkinter control panel to streamline employee attendance. Operators can enroll new faces, run capture sessions, and export CSV rosters without touching the command line. Admin tooling keeps the dataset clean and reminds the team when retraining is required.
 
-# FaceID-Attendance-App
-
-Modernized Tkinter desktop console for capturing, reviewing, and managing face-recognition attendance sessions.
-
-![Python](https://img.shields.io/badge/Python-3.10+-blue?logo=python) ![OpenCV](https://img.shields.io/badge/OpenCV-LBPH-critical) ![Tkinter](https://img.shields.io/badge/UI-Tkinter-green)
-
-## Table of Contents
-- [Overview](#overview)
-- [Architecture Overview](#architecture-overview)
-- [Folder Layout](#folder-layout)
-- [Features](#features)
-- [Data Flow](#data-flow)
-- [Quick Start](#quick-start)
-- [Usage Guide](#usage-guide)
-- [Automation Scripts](#automation-scripts)
-- [Data & Models](#data--models)
-- [Troubleshooting](#troubleshooting)
-- [Roadmap](#roadmap)
-
-## Overview
-The app combines OpenCV (Haar Cascade + LBPH) with a Tkinter control panel to streamline attendance.
-
 ## Architecture Overview
 ```
 ┌───────────┐      Tk events      ┌──────────────────┐
@@ -102,6 +80,38 @@ python scripts/02_train_model.py
 python frontend/attendance_app.py
 ```
 
+## Download Windows `.exe`
+If you just want to run the app (no Python required), download the latest prebuilt executable from the repository **Releases** page and run it.
+
+Notes:
+- The `.exe` creates `data/` and `models/` folders next to itself on first run.
+- This repo does **not** publish real face datasets or trained models in git history. Use Releases for binaries.
+
+## Build a Windows `.exe` (PyInstaller)
+This produces a distributable Windows build. When run as an `.exe`, the app writes `data/` and `models/` next to the executable (so it can run from any folder).
+
+```powershell
+# 1) From the repo root, activate your venv
+\.\.venv\Scripts\activate
+
+# 2) Install runtime deps + PyInstaller
+python -m pip install -r requirements.txt
+python -m pip install pyinstaller
+
+# 3) Build (one-folder distribution)
+python -m PyInstaller --noconfirm --clean FaceAttendance.spec
+
+# Output:
+# dist\FaceAttendance.exe
+```
+
+Notes:
+- Distribute by copying `dist\\FaceAttendance.exe`.
+- On first run, the app creates `data\\` and `models\\` next to the exe.
+- The GUI launches enrollment/training in a separate console by running the same exe with subcommands (`create-dataset`, `train-model`).
+
+Publishing tip (GitHub): build locally, then upload `dist\\FaceAttendance.exe` as a Release asset.
+
 | Requirement | Notes |
 | --- | --- |
 | Python | 3.10+ recommended |
@@ -125,11 +135,13 @@ python frontend/attendance_app.py
 | `scripts/02_train_model.py` | Trains LBPH and writes `models/trainer.yml`. |
 
 ## Data & Models
-- `data/Attendance.csv`: append-only log of recognition events.
-- `data/UserDetails.csv`: roster.
-- `data/EnrollmentRequests.csv`: enrollment request queue.
-- `data/dataset/`: raw grayscale face crops.
-- `models/trainer.yml`: LBPH model. Regenerate after dataset changes.
+- `data/Attendance.csv`, `data/UserDetails.csv`, `data/EnrollmentRequests.csv`: CSV storage used by the app.
+- `data/dataset/`: raw grayscale face crops (local-only).
+- `models/trainer.yml`: LBPH model (local-only). Regenerate after dataset changes.
+
+Privacy:
+- Do **not** commit real face images or trained models to git.
+- This repo includes only sanitized CSV templates; keep real data locally.
 
 ## Troubleshooting
 - **Camera not found**: close Teams/Zoom or other apps using the webcam.

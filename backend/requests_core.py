@@ -2,11 +2,10 @@ from __future__ import annotations
 
 import pandas as pd
 from datetime import datetime
-from pathlib import Path
 
-ROOT_DIR = Path(__file__).resolve().parents[1]
-DATA_DIR = ROOT_DIR / 'data'
-REQUESTS_FILE = DATA_DIR / 'EnrollmentRequests.csv'
+from shared.paths import data_dir
+
+REQUESTS_FILE = data_dir() / 'EnrollmentRequests.csv'
 COLUMNS = ['RequestId', 'Name', 'Contact', 'Message', 'Timestamp', 'Status']
 
 

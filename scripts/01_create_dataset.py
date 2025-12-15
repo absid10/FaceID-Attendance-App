@@ -2,13 +2,18 @@ import argparse
 
 import cv2
 import pandas as pd
+import sys
 from pathlib import Path
 
 ROOT_DIR = Path(__file__).resolve().parents[1]
-DATA_DIR = ROOT_DIR / 'data'
-ASSETS_DIR = ROOT_DIR / 'assets'
+if str(ROOT_DIR) not in sys.path:
+    sys.path.append(str(ROOT_DIR))
+
+from shared.paths import assets_dir, data_dir
+
+DATA_DIR = data_dir()
 DATASET_DIR = DATA_DIR / 'dataset'
-CASCADE_PATH = ASSETS_DIR / 'haarcascade_frontalface_default.xml'
+CASCADE_PATH = assets_dir() / 'haarcascade_frontalface_default.xml'
 USER_DETAILS_FILE = DATA_DIR / 'UserDetails.csv'
 SAMPLES_PER_USER = 80
 BLUR_THRESHOLD = 60.0  # Higher value => stricter sharpness requirement

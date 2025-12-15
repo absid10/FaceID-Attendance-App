@@ -16,6 +16,8 @@ ROOT_DIR = Path(__file__).resolve().parents[1]
 if str(ROOT_DIR) not in sys.path:
     sys.path.append(str(ROOT_DIR))
 
+from shared.paths import bundle_dir, data_dir, is_frozen
+
 from backend.attendance_core import (
     delete_user_profile,
     load_attendance,
@@ -32,9 +34,9 @@ SIDEBAR_COLOR = '#020617'
 CARD_COLOR = '#1e293b'
 ACCENT_COLOR = '#22d3ee'
 HIGHLIGHT_COLOR = '#38bdf8'
-DATA_DIR = ROOT_DIR / 'data'
+DATA_DIR = data_dir()
 DATASET_DIR = DATA_DIR / 'dataset'
-SCRIPTS_DIR = ROOT_DIR / 'scripts'
+SCRIPTS_DIR = bundle_dir() / 'scripts'
 
 
 class AttendanceViewer(tk.Toplevel):
@@ -389,15 +391,17 @@ class AttendanceApp(tk.Tk):
 
     def launch_enrollment(self, prefill_id: int | None = None,
                           prefill_name: str | None = None) -> None:
-        script_path = SCRIPTS_DIR / '01_create_dataset.py'
-        if not script_path.exists():
-            messagebox.showerror('Script Missing',
-                                 'Cannot find 01_create_dataset.py in this folder.')
-            return
-
         self.status_var.set('Launching enrollment window...')
         try:
-            cmd = [sys.executable, str(script_path)]
+            if is_frozen():
+                cmd = [sys.executable, 'create-dataset']
+            else:
+                script_path = SCRIPTS_DIR / '01_create_dataset.py'
+                if not script_path.exists():
+                    messagebox.showerror('Script Missing',
+                                         'Cannot find 01_create_dataset.py in this folder.')
+                    return
+                cmd = [sys.executable, str(script_path)]
             if prefill_id is not None:
                 cmd.extend(['--id', str(prefill_id)])
             if prefill_name:
@@ -413,15 +417,18 @@ class AttendanceApp(tk.Tk):
             self.status_var.set('Idle — ready to capture.')
 
     def train_model(self) -> None:
-        script_path = SCRIPTS_DIR / '02_train_model.py'
-        if not script_path.exists():
-            messagebox.showerror('Script Missing',
-                                 'Cannot find 02_train_model.py in this folder.')
-            return
-
         self.status_var.set('Training model in separate console...')
         try:
-            subprocess.Popen(['cmd.exe', '/c', 'start', '', sys.executable, str(script_path)])
+            if is_frozen():
+                cmd = [sys.executable, 'train-model']
+            else:
+                script_path = SCRIPTS_DIR / '02_train_model.py'
+                if not script_path.exists():
+                    messagebox.showerror('Script Missing',
+                                         'Cannot find 02_train_model.py in this folder.')
+                    return
+                cmd = [sys.executable, str(script_path)]
+            subprocess.Popen(['cmd.exe', '/c', 'start', '', *cmd])
             messagebox.showinfo(
                 'Training Launched',
                 'A console window is running 02_train_model.py. Wait for it to finish before the next capture.',
@@ -713,4 +720,23 @@ def main() -> None:
 
 
 if __name__ == '__main__':
+    # When frozen as an exe, re-invoke the same binary with a subcommand to
+    # run enrollment/training in a separate console window.
+    if len(sys.argv) > 1:
+        subcommand = sys.argv[1].strip().lower()
+        if subcommand in {'create-dataset', 'enroll'}:
+            import runpy
+
+            script_path = bundle_dir() / 'scripts' / '01_create_dataset.py'
+            sys.argv = [str(script_path), *sys.argv[2:]]
+            runpy.run_path(str(script_path), run_name='__main__')
+            raise SystemExit(0)
+        if subcommand in {'train-model', 'train'}:
+            import runpy
+
+            script_path = bundle_dir() / 'scripts' / '02_train_model.py'
+            sys.argv = [str(script_path), *sys.argv[2:]]
+            runpy.run_path(str(script_path), run_name='__main__')
+            raise SystemExit(0)
+
     main()

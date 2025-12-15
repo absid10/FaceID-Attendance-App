@@ -8,10 +8,11 @@ from datetime import datetime
 from pathlib import Path
 from typing import Callable, Dict, Tuple, cast
 
-ROOT_DIR = Path(__file__).resolve().parents[1]
-DATA_DIR = ROOT_DIR / 'data'
-ASSETS_DIR = ROOT_DIR / 'assets'
-MODELS_DIR = ROOT_DIR / 'models'
+from shared.paths import assets_dir, data_dir, models_dir
+
+DATA_DIR = data_dir()
+ASSETS_DIR = assets_dir()
+MODELS_DIR = models_dir()
 DATASET_DIR = DATA_DIR / 'dataset'
 CASCADE_PATH = ASSETS_DIR / 'haarcascade_frontalface_default.xml'
 MODEL_PATH = MODELS_DIR / 'trainer.yml'
@@ -152,12 +153,35 @@ def run_recognition(
     status_callback: StatusCallback | None = None,
     log_callback: LogCallback | None = None,
 ) -> None:
+    if not CASCADE_PATH.exists():
+        raise FileNotFoundError(
+            'Face cascade classifier is missing. Expected at: '
+            f'{CASCADE_PATH}\n\n'
+            'If you are running the packaged .exe, ensure the assets folder is bundled correctly.'
+        )
+
+    if not MODEL_PATH.exists():
+        raise FileNotFoundError(
+            'Recognition model not found. Expected at: '
+            f'{MODEL_PATH}\n\n'
+            'Fix: Enroll at least one face, then train the model, then retry capture.\n'
+            '- In the app: click "Enroll New Face" then "Train Recognition Model"\n'
+            '- Or run: FaceAttendance.exe train-model'
+        )
+
     user_map = load_user_details()
     attendance_df = load_attendance()
 
     # Keep parameters aligned with scripts/02_train_model.py.
     recognizer = cv2.face.LBPHFaceRecognizer_create(radius=2, neighbors=8, grid_x=8, grid_y=8)
-    recognizer.read(str(MODEL_PATH))
+    try:
+        recognizer.read(str(MODEL_PATH))
+    except cv2.error as exc:
+        raise RuntimeError(
+            'Failed to load the recognition model.\n'
+            f'Path: {MODEL_PATH}\n'
+            'Try retraining the model ("Train Recognition Model") and ensure the file is not empty.'
+        ) from exc
     face_cascade = cv2.CascadeClassifier(str(CASCADE_PATH))
 
     cam = cv2.VideoCapture(camera_index)

@@ -5,11 +5,17 @@ __pycache__/
 # Local data / generated artifacts (avoid committing personal data)
 data/dataset/
 models/trainer.yml
-data/Attendance.csv
-data/EnrollmentRequests.csv
-data/UserDetails.csv
+
+# Keep personal/local CSVs out of git. Commit only sanitized templates.
+data/private/
+data/*.local.csv
+models/*.local.yml
 
 # OS/editor
 .DS_Store
 Thumbs.db
 .vscode/
+
+# PyInstaller outputs
+build/
+dist/
