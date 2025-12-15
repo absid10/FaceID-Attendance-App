@@ -25,5 +25,12 @@ Thumbs.db
 build/
 dist/
 
+# Runtime artifacts (local-only)
+logs/
+.ci_runtime/
+.ci_runtime_local/
+data/*.sqlite3
+data/settings.json
+
 # Local release folder (easy-to-run copy)
 release/
