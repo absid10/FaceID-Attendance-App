@@ -1,175 +1,369 @@
-# FaceAttendance (FaceID Attendance App)
+<div align="center">
 
-Windows desktop attendance app using face recognition (OpenCV) with a Tkinter UI. Operators can enroll users, train a recognition model, and log attendance sessions. Data is stored locally in SQLite.
+# 🎯 FaceID Attendance App
 
-![Python](https://img.shields.io/badge/Python-3.10%2B-blue?logo=python) ![OpenCV](https://img.shields.io/badge/OpenCV-LBPH-critical) ![Tkinter](https://img.shields.io/badge/UI-Tkinter-green)
+### *Intelligent Face Recognition Attendance System*
 
-## What this project includes
-- **Desktop UI (Tkinter)** for Admin and User flows
-- **Face detection + recognition** using Haar Cascade + LBPH (OpenCV contrib)
-- **Local database** using SQLite (`attendance.sqlite3`)
-- **Enrollment + training scripts** bundled into the Windows EXE
-- **Windows distribution** via GitHub Releases (EXE + ZIP)
-- **CI + Release automation** using GitHub Actions
+![Python](https://img.shields.io/badge/Python-3.10%2B-blue? logo=python&logoColor=white)
+![OpenCV](https://img.shields.io/badge/OpenCV-LBPH-critical?logo=opencv&logoColor=white)
+![Tkinter](https://img.shields.io/badge/UI-Tkinter-green?logo=python&logoColor=white)
+![License](https://img.shields.io/github/license/absid10/FaceID-Attendance-App)
+![Downloads](https://img.shields.io/github/downloads/absid10/FaceID-Attendance-App/total)
+![Release](https://img.shields.io/github/v/release/absid10/FaceID-Attendance-App)
 
-## Table of Contents
-- [Features](#features)
-- [How It Works](#how-it-works)
-- [Download and Run (Windows)](#download-and-run-windows)
-- [Run from Source (Developers)](#run-from-source-developers)
-- [Data, Storage, and Privacy](#data-storage-and-privacy)
-- [Settings](#settings)
-- [Build Windows EXE](#build-windows-exe)
-- [Automated Releases (GitHub Actions)](#automated-releases-github-actions)
-- [Troubleshooting](#troubleshooting)
-- [Project Layout](#project-layout)
+**A Python-based Face ID Attendance Application that uses facial recognition to automatically mark and manage attendance.  Capture faces via webcam, match them against a registered database, log check-in/check-out times, and export attendance reports.**
 
-## Features
-- **Admin Console**
-    - Enroll new face (guided capture)
-    - Train recognition model
-    - Log attendance session
-    - Manage users
-    - Export reports (daily/weekly/monthly CSV)
-- **User Dashboard**
-    - Self-service enrollment request form
-- **Safety/UX**
-    - Consent prompt on first run
-    - Privacy Mode (disables enrollment/training)
-    - Kiosk mode option (`--kiosk`)
-- **Quality**
-    - Recognition uses ROI normalization (200×200) and consistent params across train/run
-    - Duplicate log protection (unique constraint + optional time window)
-    - Rotating file logging
+[📥 Download](#-download) • [✨ Features](#-features) • [📖 Documentation](#-table-of-contents) • [🚀 Quick Start](#-quick-start-windows)
 
-## How It Works
-High-level flow:
-1. **Enroll**: Capture face samples to `data/dataset/`.
-2. **Train**: Build LBPH model into `models/trainer.yml`.
-3. **Recognize**: Run a session to match faces and log attendance.
+</div>
 
-Storage flow:
-- Primary source of truth is **SQLite**: `data/attendance.sqlite3`.
-- CSV files exist for compatibility/templates and exports.
+---
 
-## Download and Run (Windows)
-If you just want to run the app (no Python required), use the GitHub **Releases** page.
+## 📥 Download
 
-Recommended download:
-- `FaceAttendance-<version>-windows.zip`
+<div align="center">
 
-Run steps:
-1. Download the ZIP from **Releases**.
-2. Extract it to a writable folder (example: `Desktop\FaceAttendance`).
-3. Double-click `FaceAttendance.exe`.
+### 🪟 Windows Application (No Python Required)
 
-First-time checklist (required before recognition works):
-1. Accept the consent prompt.
-2. Open **Settings** and confirm **Camera Index**.
-3. Admin Console → **Enroll New Face** (enter ID + Name, complete capture).
-4. Admin Console → **Train Recognition Model**.
-5. Admin Console → **Log Attendance Session**.
+**Latest Release:  v1.0.1**
 
-End-user guide:
-- See [RUN_WINDOWS.txt](RUN_WINDOWS.txt) for copy/paste instructions.
+[![Download ZIP](https://img.shields.io/badge/Download-Windows_ZIP-0078D4?style=for-the-badge&logo=windows&logoColor=white)](https://github.com/absid10/FaceID-Attendance-App/releases/download/v1.0.1/FaceAttendance-v1.0.1-windows.zip)
+[![Download EXE](https://img.shields.io/badge/Download-Standalone_EXE-0078D4?style=for-the-badge&logo=windows&logoColor=white)](https://github.com/absid10/FaceID-Attendance-App/releases/download/v1.0.1/FaceAttendance. exe)
 
-## Run from Source (Developers)
-Requirements:
-- Windows (developed on Windows 11)
-- Python 3.10+ (CI uses Python 3.12)
+[![View All Releases](https://img.shields.io/badge/View-All_Releases-gray?style=for-the-badge&logo=github)](https://github.com/absid10/FaceID-Attendance-App/releases)
+
+**📊 File Size:** ~50MB | **✅ Verified:** SHA256 Checksums Available
+
+</div>
+
+---
+
+## 📊 Project Overview
+
+```mermaid
+graph LR
+    A[👤 User Enrollment] --> B[📸 Face Capture]
+    B --> C[🤖 Model Training]
+    C --> D[🎯 Face Recognition]
+    D --> E[📝 Attendance Logging]
+    E --> F[📊 Report Export]
+    
+    style A fill:#4CAF50
+    style C fill:#2196F3
+    style E fill:#FF9800
+    style F fill:#9C27B0
+```
+
+### 🔧 Technology Stack
+
+```mermaid
+pie title "Language Composition"
+    "Python" : 92
+    "SQL" : 4. 7
+    "PowerShell" : 2.2
+    "Inno Setup" : 1.1
+```
+
+---
+
+## ✨ Features
+
+<table>
+<tr>
+<td width="50%">
+
+### 👨‍💼 **Admin Console**
+- ✅ **Enroll New Users** - Guided face capture process
+- 🧠 **Train AI Model** - Build recognition model
+- 📋 **Log Attendance** - Automated session tracking
+- 👥 **User Management** - Manage registered users
+- 📊 **Export Reports** - Daily/Weekly/Monthly CSV exports
+
+</td>
+<td width="50%">
+
+### 👤 **User Dashboard**
+- 📝 **Self-Service Enrollment** - Request form submission
+- 🔐 **Privacy Controls** - Consent management
+- 📱 **Kiosk Mode** - Dedicated attendance terminal
+- 🎯 **Real-time Recognition** - Instant face matching
+- 🔒 **Data Privacy** - Local-only storage
+
+</td>
+</tr>
+</table>
+
+---
+
+## 🏗️ System Architecture
+
+```mermaid
+flowchart TD
+    A[🖥️ Tkinter UI] --> B[🎥 OpenCV Camera]
+    A --> C[💾 SQLite Database]
+    B --> D[🔍 Haar Cascade Detection]
+    D --> E[🤖 LBPH Recognition]
+    E --> F[✅ Match/No Match]
+    F --> C
+    C --> G[📊 CSV Reports]
+    
+    style A fill:#e3f2fd
+    style B fill:#fff3e0
+    style C fill:#f3e5f5
+    style E fill:#e8f5e9
+    style G fill:#fce4ec
+```
+
+---
+
+## 🚀 Quick Start (Windows)
+
+### Step 1: Download & Extract
+```
+📦 Download FaceAttendance-v1.0.1-windows.zip
+📂 Extract to Desktop\FaceAttendance
+🖱️ Double-click FaceAttendance. exe
+```
+
+### Step 2: Initial Setup
+
+```mermaid
+graph TD
+    A[🚀 Launch App] --> B[✅ Accept Consent]
+    B --> C[⚙️ Configure Camera]
+    C --> D[👤 Enroll First User]
+    D --> E[🧠 Train Model]
+    E --> F[✨ Start Recognition]
+    
+    style A fill:#4CAF50,color:#fff
+    style F fill:#2196F3,color:#fff
+```
+
+1. ✅ **Accept** the consent prompt
+2. ⚙️ **Open Settings** → Confirm Camera Index
+3. 👤 **Admin Console** → Enroll New Face
+4. 🧠 **Admin Console** → Train Recognition Model
+5. 📋 **Admin Console** → Log Attendance Session
+
+> 💡 **Tip:** See [RUN_WINDOWS.txt](RUN_WINDOWS.txt) for detailed instructions
+
+---
+
+## 🎯 How It Works
+
+### Recognition Pipeline
+
+```mermaid
+sequenceDiagram
+    participant U as 👤 User
+    participant C as 📸 Camera
+    participant D as 🔍 Detector
+    participant R as 🤖 Recognizer
+    participant DB as 💾 Database
+    
+    U->>C: Stand in front of camera
+    C->>D:  Capture frame
+    D->>D: Detect face (Haar Cascade)
+    D->>R: Extract face ROI (200x200)
+    R->>R: Match against LBPH model
+    R->>DB: Log attendance if confident
+    DB->>U: ✅ Attendance marked! 
+```
+
+### Data Flow
+
+1. **📸 Enroll**:  Capture face samples → `data/dataset/`
+2. **🧠 Train**: Build LBPH model → `models/trainer. yml`
+3. **🎯 Recognize**: Match faces → Log to SQLite
+4. **📊 Export**:  Generate CSV reports
+
+---
+
+## 💻 Run from Source (Developers)
+
+### Prerequisites
+- 🪟 Windows 10/11
+- 🐍 Python 3.10+
+
+### Installation
 
 ```powershell
-py -3 -m venv .venv
-\.\.venv\Scripts\activate
+# Create virtual environment
+py -3 -m venv . venv
+
+# Activate environment
+.\. venv\Scripts\activate
+
+# Install dependencies
 python -m pip install -r requirements.txt
 
-# Launch UI
+# Launch application
 python frontend/attendance_app.py
 ```
 
-Optional (manual scripts):
+### Optional Manual Scripts
 ```powershell
 python scripts/01_create_dataset.py
-python scripts/02_train_model.py
+python scripts/02_train_model. py
 ```
 
-## Data, Storage, and Privacy
-This app stores user and attendance data locally.
+---
 
-**SQLite (SQL database)**
-- File: `data/attendance.sqlite3`
-- Tables: `users`, `attendance`, `enrollment_requests`
-- Schema documentation:
-    - [backend/schema.sql](backend/schema.sql)
-    - [docs/sql/sqlite_reference.sql](docs/sql/sqlite_reference.sql)
+## 💾 Data Storage & Privacy
 
-**Dataset and model (local-only)**
-- Face samples: `data/dataset/` (images)
-- Trained model: `models/trainer.yml`
+### 🗃️ Database Schema (SQLite)
 
-**Runtime location when using the Windows EXE**
-- If the EXE folder is writable: writes `data/`, `models/`, `logs/` next to the EXE (portable mode)
-- Otherwise: falls back to `%LOCALAPPDATA%\FaceAttendance`
+**File:** `data/attendance.sqlite3`
 
-**Privacy warning**
-- Do not commit real face images or trained models to Git.
-- This repo is configured to ignore dataset images, model artifacts, logs, and local DB files.
+| Table | Purpose |
+|-------|---------|
+| 👥 `users` | Registered user information |
+| 📋 `attendance` | Check-in/out timestamps |
+| 📝 `enrollment_requests` | Self-service enrollment queue |
 
-## Settings
-Open **Settings** in the UI to configure:
-- Camera index
-- Session duration (seconds)
-- LBPH threshold (higher = more tolerant matches)
-- Duplicate window (minutes)
-- Privacy Mode
+> 📖 See [backend/schema.sql](backend/schema.sql) for full schema
 
-Kiosk mode:
+### 📁 Local Storage Structure
+
+```
+FaceAttendance/
+├── 📂 data/
+│   ├── 💾 attendance.sqlite3      # Primary database
+│   └── 📂 dataset/                # Face images (local-only)
+├── 📂 models/
+│   └── 🤖 trainer.yml             # Trained LBPH model
+└── 📂 logs/
+    └── 📄 faceattendance.log      # Application logs
+```
+
+### 🔒 Privacy & Security
+
+- ✅ **100% Local Storage** - No cloud uploads
+- ✅ **Consent Required** - First-run privacy agreement
+- ✅ **Privacy Mode** - Disable enrollment/training
+- ⚠️ **Biometric Data** - Never commit face images to Git
+- 🔐 **Portable Mode** - Data stays with the EXE folder
+
+---
+
+## ⚙️ Configuration & Settings
+
+### Settings Panel Options
+
+| Setting | Description | Default |
+|---------|-------------|---------|
+| 📹 Camera Index | Webcam device ID | 0 |
+| ⏱️ Session Duration | Recognition session length | 60s |
+| 🎯 LBPH Threshold | Match tolerance (higher = lenient) | 50 |
+| 🔄 Duplicate Window | Prevent re-logging interval | 5 min |
+| 🔒 Privacy Mode | Disable enrollment/training | Off |
+
+### Kiosk Mode
+
 ```powershell
 python frontend/attendance_app.py --kiosk
 ```
 
-## Build Windows EXE
-This repo uses PyInstaller to build a single EXE and then assembles an easy-to-run `release/` folder.
+---
+
+## 🔨 Build from Source
+
+### Create Windows EXE
 
 ```powershell
-\.\.venv\Scripts\activate
+# Activate virtual environment
+.\.venv\Scripts\activate
+
+# Install build tools
 python -m pip install -r requirements.txt
 python -m pip install pyinstaller
 
-# Builds release/FaceAttendance.exe
+# Build executable
 powershell -ExecutionPolicy Bypass -File .\build_exe.ps1 -Clean
 ```
 
-Notes:
-- The build script prefers `.venv` if present to ensure required deps (like Pillow) are included.
-- In the packaged EXE, enrollment/training are run by re-invoking the same EXE with subcommands.
+**Output:** `release/FaceAttendance. exe`
 
-## Automated Releases (GitHub Actions)
-When you push a `v*` tag, GitHub Actions builds and publishes:
-- `FaceAttendance.exe`
-- `FaceAttendance-<tag>-windows.zip`
-- `checksums.sha256`
+---
 
-Example:
-```powershell
-git tag v1.0.1
-git push origin v1.0.1
+## 🤖 Automated Releases (CI/CD)
+
+### GitHub Actions Workflow
+
+```mermaid
+graph LR
+    A[📝 Create Tag] --> B[🔨 Build EXE]
+    B --> C[📦 Package ZIP]
+    C --> D[🔐 Generate SHA256]
+    D --> E[🚀 Publish Release]
+    
+    style A fill:#4CAF50
+    style E fill:#2196F3
 ```
 
-## Troubleshooting
-- **Enroll popup flashes and closes**: update to the latest Release (older builds relied on console input).
-- **Camera won’t open**: close Teams/Zoom/Discord/browser tabs; change Camera Index in Settings.
-- **Capture says model missing**: enroll at least one user and train the model.
-- **Missing `cv2.face`**: ensure you use `opencv-contrib-python` (not plain `opencv-python`).
-- **Logs**: check `logs/faceattendance.log` under the runtime folder.
+**Trigger a release:**
+```powershell
+git tag v1.0.2
+git push origin v1.0.2
+```
 
-## Project Layout
-| Path | Purpose |
-| --- | --- |
-| `frontend/` | Tkinter UI (`attendance_app.py`) |
-| `backend/` | Core logic + SQLite storage (`storage.py`) |
-| `scripts/` | Dataset capture + training scripts |
-| `assets/` | Haar cascade and other bundled resources |
-| `data/` | SQLite DB + CSV templates + dataset folder (local-only images) |
-| `models/` | Trained model output (local-only) |
-| `.github/workflows/` | CI + Release automation |
+**Artifacts Generated:**
+- ✅ `FaceAttendance. exe`
+- ✅ `FaceAttendance-v1.0.2-windows.zip`
+- ✅ `checksums.sha256`
+
+---
+
+## 🐛 Troubleshooting
+
+| Issue | Solution |
+|-------|----------|
+| ⚡ Enroll popup flashes | Update to latest release |
+| 📹 Camera won't open | Close other apps using camera; check Settings → Camera Index |
+| 🤖 Model missing error | Enroll ≥1 user and train the model |
+| ❌ Missing `cv2.face` | Install `opencv-contrib-python` instead of `opencv-python` |
+| 📋 Check logs | See `logs/faceattendance.log` |
+
+---
+
+## 📂 Project Structure
+
+```
+FaceID-Attendance-App/
+├── 🖥️ frontend/              # Tkinter UI (attendance_app.py)
+├── ⚙️ backend/               # Core logic + SQLite storage
+├── 📜 scripts/               # Dataset capture + training scripts
+├── 🎨 assets/                # Haar cascade + resources
+├── 💾 data/                  # Database + CSV templates
+├── 🤖 models/                # Trained model output
+├── 🔧 . github/workflows/     # CI/CD automation
+└── 📖 docs/                  # Documentation
+```
+
+---
+
+## 📈 Project Stats
+
+<div align="center">
+
+![GitHub stars](https://img.shields.io/github/stars/absid10/FaceID-Attendance-App?style=social)
+![GitHub forks](https://img.shields.io/github/forks/absid10/FaceID-Attendance-App? style=social)
+![GitHub watchers](https://img.shields.io/github/watchers/absid10/FaceID-Attendance-App?style=social)
+
+</div>
+
+---
+
+## 📄 License
+
+This project is open source.  See the [LICENSE](LICENSE) file for details.
+
+---
+
+<div align="center">
+
+**Made with ❤️ using Python, OpenCV, and Tkinter**
+
+[⬆ Back to Top](#-faceid-attendance-app)
+
+</div>
