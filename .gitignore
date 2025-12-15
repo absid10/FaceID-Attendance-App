@@ -24,3 +24,6 @@ Thumbs.db
 # PyInstaller outputs
 build/
 dist/
+
+# Local release folder (easy-to-run copy)
+release/
