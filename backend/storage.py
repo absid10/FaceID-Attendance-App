@@ -275,7 +275,9 @@ class Storage:
                     conn, _read_csv_safe(attendance_csv)
                 )
             if requests_csv:
-                summary["requests_inserted"] = _insert_request_rows(conn, _read_csv_safe(requests_csv))
+                summary["requests_inserted"] = _insert_request_rows(
+                    conn, _read_csv_safe(requests_csv)
+                )
 
         return summary
 
