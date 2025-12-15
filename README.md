@@ -83,6 +83,12 @@ python frontend/attendance_app.py
 ## Download Windows `.exe`
 If you just want to run the app (no Python required), download the latest prebuilt executable from the repository **Releases** page and run it.
 
+Recommended download:
+- `FaceAttendance-<version>-windows.zip` (contains `FaceAttendance.exe` plus a seeded `data/` folder for templates)
+
+You can also download:
+- `FaceAttendance.exe` (the app will create `data/` and `models/` on first run)
+
 Notes:
 - If the `.exe` folder is writable (portable run), it writes `data/` + `models/` next to itself.
 - If installed under a protected folder (like Program Files), it falls back to `%LOCALAPPDATA%\FaceAttendance`.
@@ -125,7 +131,9 @@ Notes:
 Publishing tip (GitHub): build locally, then upload `dist\\FaceAttendance.exe` as a Release asset.
 
 ### Automated Releases (GitHub Actions)
-This repo includes a workflow that builds and attaches `release/FaceAttendance.exe` automatically when you push a tag.
+This repo includes a workflow that builds and attaches Windows downloads automatically when you push a tag:
+- `FaceAttendance.exe`
+- `FaceAttendance-<version>-windows.zip`
 
 Example:
 ```powershell

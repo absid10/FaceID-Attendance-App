@@ -52,6 +52,7 @@ class Storage:
 
                 CREATE INDEX IF NOT EXISTS idx_attendance_user_date ON attendance(user_id, date);
                 CREATE INDEX IF NOT EXISTS idx_attendance_ts ON attendance(ts);
+                CREATE UNIQUE INDEX IF NOT EXISTS uniq_attendance_user_ts ON attendance(user_id, ts);
 
                 CREATE TABLE IF NOT EXISTS enrollment_requests (
                     request_id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -238,58 +239,188 @@ class Storage:
                 "c"
             ]
 
-        if user_count == 0 and users_csv.exists():
-            try:
-                df = pd.read_csv(users_csv)
-                if {"Id", "Name"}.issubset(df.columns):
-                    for _, r in df.iterrows():
-                        try:
-                            self.upsert_user(int(r["Id"]), str(r["Name"]))
-                        except Exception:
-                            continue
-            except Exception:
-                pass
+        if user_count == 0 or att_count == 0 or req_count == 0:
+            self.sync_from_csv(
+                users_csv=users_csv if user_count == 0 else None,
+                attendance_csv=att_csv if att_count == 0 else None,
+                requests_csv=req_csv if req_count == 0 else None,
+            )
 
-        if att_count == 0 and att_csv.exists():
-            try:
-                df = pd.read_csv(att_csv)
-                cols = {"Id", "Name", "Date", "Time"}
-                if cols.issubset(df.columns):
-                    with self._connect() as conn:
-                        for _, r in df.iterrows():
-                            try:
-                                user_id = int(r["Id"])
-                                name = str(r["Name"])
-                                date = str(r["Date"])
-                                time = str(r["Time"])
-                                ts = f"{date} {time}"
-                                conn.execute(
-                                    "INSERT INTO attendance(user_id, name, ts, date, time) VALUES(?, ?, ?, ?, ?)",
-                                    (user_id, name, ts, date, time),
-                                )
-                            except Exception:
-                                continue
-            except Exception:
-                pass
+    def sync_from_csv(
+        self,
+        *,
+        users_csv: Optional[Path] = None,
+        attendance_csv: Optional[Path] = None,
+        requests_csv: Optional[Path] = None,
+    ) -> dict[str, int]:
+        """Merge legacy CSV data into SQLite.
 
-        if req_count == 0 and req_csv.exists():
-            try:
-                df = pd.read_csv(req_csv)
-                if {"Name", "Contact", "Message", "Timestamp", "Status"}.issubset(df.columns):
-                    with self._connect() as conn:
-                        for _, r in df.iterrows():
-                            try:
-                                conn.execute(
-                                    "INSERT INTO enrollment_requests(name, contact, message, timestamp, status) VALUES(?, ?, ?, ?, ?)",
-                                    (
-                                        str(r["Name"]),
-                                        str(r["Contact"]),
-                                        str(r["Message"]),
-                                        str(r["Timestamp"]),
-                                        str(r["Status"]),
-                                    ),
-                                )
-                            except Exception:
-                                continue
-            except Exception:
-                pass
+        Safe to re-run for users + attendance:
+        - users are upserted by id
+        - attendance uses INSERT OR IGNORE keyed by (user_id, ts)
+        """
+
+        users_csv = _default_path_if_exists(users_csv)
+        attendance_csv = _default_path_if_exists(attendance_csv)
+        requests_csv = _default_path_if_exists(requests_csv)
+
+        summary = {"users_upserted": 0, "attendance_inserted": 0, "requests_inserted": 0}
+
+        if users_csv:
+            summary["users_upserted"] = _upsert_users(self, _read_csv_safe(users_csv))
+
+        with self._connect() as conn:
+            if attendance_csv:
+                summary["attendance_inserted"] = _insert_attendance_rows(
+                    conn, _read_csv_safe(attendance_csv)
+                )
+            if requests_csv:
+                summary["requests_inserted"] = _insert_request_rows(conn, _read_csv_safe(requests_csv))
+
+        return summary
+
+
+def users_count_safe(path: Path) -> bool:
+    try:
+        return path.exists() and path.stat().st_size > 0
+    except Exception:
+        return False
+
+
+def _read_csv_safe(path: Path) -> pd.DataFrame:
+    try:
+        return pd.read_csv(path)
+    except Exception:
+        return pd.DataFrame()
+
+
+def _as_str(value) -> str:
+    try:
+        return str(value)
+    except Exception:
+        return ""
+
+
+def _as_int(value):
+    try:
+        return int(value)
+    except Exception:
+        return None
+
+
+def _as_ts(date_str: str, time_str: str) -> str:
+    date_str = (date_str or "").strip()
+    time_str = (time_str or "").strip()
+    if not date_str or not time_str:
+        return ""
+    return f"{date_str} {time_str}"
+
+
+def _coerce_time(t: str) -> str:
+    # Keep as-is; assume HH:MM:SS.
+    return (t or "").strip()
+
+
+def _coerce_date(d: str) -> str:
+    # Keep as-is; assume YYYY-MM-DD.
+    return (d or "").strip()
+
+
+def _normalize_status(s: str) -> str:
+    s = (s or "").strip()
+    return s if s else "Pending"
+
+
+def _normalize_message(s: str) -> str:
+    return (s or "").strip()
+
+
+def _normalize_contact(s: str) -> str:
+    return (s or "").strip()
+
+
+def _normalize_name(s: str) -> str:
+    return (s or "").strip()
+
+
+def _normalize_timestamp(s: str) -> str:
+    return (s or "").strip()
+
+
+def _should_import_df(df: pd.DataFrame, required: set[str]) -> bool:
+    return df is not None and not getattr(df, "empty", True) and required.issubset(set(df.columns))
+
+
+def _safe_iterrows(df: pd.DataFrame):
+    try:
+        return df.iterrows()
+    except Exception:
+        return []
+
+
+def _insert_attendance_rows(conn: sqlite3.Connection, df: pd.DataFrame) -> int:
+    inserted = 0
+    required = {"Id", "Name", "Date", "Time"}
+    if not _should_import_df(df, required):
+        return 0
+    for _, r in _safe_iterrows(df):
+        user_id = _as_int(r.get("Id"))
+        if user_id is None:
+            continue
+        name = _as_str(r.get("Name"))
+        date = _coerce_date(_as_str(r.get("Date")))
+        time = _coerce_time(_as_str(r.get("Time")))
+        ts = _as_ts(date, time)
+        if not ts:
+            continue
+        cur = conn.execute(
+            "INSERT OR IGNORE INTO attendance(user_id, name, ts, date, time) VALUES(?, ?, ?, ?, ?)",
+            (user_id, name, ts, date, time),
+        )
+        inserted += int(cur.rowcount or 0)
+    return inserted
+
+
+def _insert_request_rows(conn: sqlite3.Connection, df: pd.DataFrame) -> int:
+    inserted = 0
+    required = {"Name", "Contact", "Message", "Timestamp", "Status"}
+    if not _should_import_df(df, required):
+        return 0
+    for _, r in _safe_iterrows(df):
+        name = _normalize_name(_as_str(r.get("Name")))
+        contact = _normalize_contact(_as_str(r.get("Contact")))
+        message = _normalize_message(_as_str(r.get("Message")))
+        ts = _normalize_timestamp(_as_str(r.get("Timestamp")))
+        status = _normalize_status(_as_str(r.get("Status")))
+        if not (name and contact and message and ts):
+            continue
+        conn.execute(
+            "INSERT INTO enrollment_requests(name, contact, message, timestamp, status) VALUES(?, ?, ?, ?, ?)",
+            (name, contact, message, ts, status),
+        )
+        inserted += 1
+    return inserted
+
+
+def _upsert_users(store: "Storage", df: pd.DataFrame) -> int:
+    inserted = 0
+    required = {"Id", "Name"}
+    if not _should_import_df(df, required):
+        return 0
+    for _, r in _safe_iterrows(df):
+        user_id = _as_int(r.get("Id"))
+        name = _normalize_name(_as_str(r.get("Name")))
+        if user_id is None or not name:
+            continue
+        store.upsert_user(user_id, name)
+        inserted += 1
+    return inserted
+
+
+def _default_path_if_exists(p: Optional[Path]) -> Optional[Path]:
+    if p is None:
+        return None
+    try:
+        return p if p.exists() else None
+    except Exception:
+        return None

@@ -27,9 +27,25 @@ jobs:
           python -m pip install pyinstaller
           ./build_exe.ps1 -Clean
 
+      - name: Package Release Zip + Checksums
+        shell: pwsh
+        run: |
+          $tag = "${{ github.ref_name }}"
+          $zip = "FaceAttendance-$tag-windows.zip"
+          if (Test-Path $zip) { Remove-Item -Force $zip }
+          Compress-Archive -Path "release\*" -DestinationPath $zip -Force
+
+          $lines = @()
+          $exeHash = (Get-FileHash "release\FaceAttendance.exe" -Algorithm SHA256).Hash
+          $zipHash = (Get-FileHash $zip -Algorithm SHA256).Hash
+          $lines += "$exeHash  FaceAttendance.exe"
+          $lines += "$zipHash  $zip"
+          $lines | Out-File -FilePath "checksums.sha256" -Encoding ascii
+
       - name: Upload Release Asset
         uses: softprops/action-gh-release@v2
         with:
           files: |
             release/FaceAttendance.exe
-            installer/FaceAttendance.iss
+            FaceAttendance-${{ github.ref_name }}-windows.zip
+            checksums.sha256
