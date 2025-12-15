@@ -3,8 +3,13 @@ __pycache__/
 *.pyc
 
 # Local data / generated artifacts (avoid committing personal data)
-data/dataset/
-models/trainer.yml
+data/dataset/*
+!data/dataset/.gitkeep
+!data/dataset/README.md
+
+models/*.yml
+!models/.gitkeep
+!models/README.md
 
 # Keep personal/local CSVs out of git. Commit only sanitized templates.
 data/private/
