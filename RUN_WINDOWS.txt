@@ -1,0 +1,43 @@
+FACEATTENDANCE — WINDOWS DOWNLOAD & RUN
+
+This project provides a downloadable Windows app (no Python required).
+
+DOWNLOAD
+1) Open the GitHub repository page.
+2) Click Releases.
+3) Download the latest file named:
+   FaceAttendance-<version>-windows.zip
+
+RUN
+1) Extract the ZIP to a normal folder you can write to.
+   Example: Desktop\FaceAttendance
+2) Double-click FaceAttendance.exe
+
+FIRST TIME SETUP
+1) Accept the consent prompt.
+2) Open Settings and confirm the Camera Index.
+   - Camera Index 0 is the most common.
+   - If the camera does not open, try 1, then 2.
+
+ENROLL + TRAIN (required once before recognition works)
+1) Go to Admin Console.
+2) Click Enroll New Face.
+   - Enter a numeric User ID and a name.
+   - A camera window should open and capture samples.
+3) After enrollment completes, go back to Admin Console.
+4) Click Train Recognition Model.
+5) Click Log Attendance Session.
+
+WHERE YOUR DATA IS SAVED
+- Portable mode (recommended): data/ and models/ are created next to FaceAttendance.exe
+- If the folder is protected (e.g., Program Files), it uses:
+  %LOCALAPPDATA%\FaceAttendance
+
+TROUBLESHOOTING
+- Camera not opening:
+  - Close Teams/Zoom/Discord/browser tabs that might be using the webcam.
+  - Change Camera Index in Settings and retry.
+- Recognition model missing:
+  - You must enroll at least one face, then train the model.
+- Logs:
+  - Look in logs\faceattendance.log under the runtime folder.
