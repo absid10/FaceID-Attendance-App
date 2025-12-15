@@ -71,10 +71,10 @@ pie title "Language Composition"
 Below are in-app screenshots of the console and live capture view:
 
 - Admin console with quick actions, model insights, and recent attendance  
-  ![image2](image2)
+  ![Admin Console](./Screenshot%202025-12-15%20205645.png)
 
 - Live attendance capture with recognition bounding box and confidence  
-  ![image1](image1)
+  ![Live Capture](./Screenshot%202025-12-15%20205707.png)
 
 ---
 
