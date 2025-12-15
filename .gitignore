@@ -1,0 +1,15 @@
+.venv/
+__pycache__/
+*.pyc
+
+# Local data / generated artifacts (avoid committing personal data)
+data/dataset/
+models/trainer.yml
+data/Attendance.csv
+data/EnrollmentRequests.csv
+data/UserDetails.csv
+
+# OS/editor
+.DS_Store
+Thumbs.db
+.vscode/

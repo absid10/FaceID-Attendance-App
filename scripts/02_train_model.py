@@ -10,6 +10,7 @@ MODELS_DIR = ROOT_DIR / 'models'
 DATASET_DIR = DATA_DIR / 'dataset'
 CASCADE_PATH = ASSETS_DIR / 'haarcascade_frontalface_default.xml'
 MODEL_PATH = MODELS_DIR / 'trainer.yml'
+FACE_SIZE = (200, 200)
 
 
 def get_images_and_labels(dataset_dir: Path):
@@ -43,11 +44,17 @@ def get_images_and_labels(dataset_dir: Path):
             minNeighbors=6,
             minSize=(80, 80)
         )
+
+        # Most dataset images are already cropped face ROIs.
+        # If the cascade can't find a face in the ROI, fall back to using the full frame.
         if len(faces) == 0:
-            continue
+            h, w = enhanced.shape[:2]
+            faces = [(0, 0, w, h)]
 
         for (x, y, w, h) in faces:
-            face_samples.append(enhanced[y:y + h, x:x + w])
+            roi = enhanced[y:y + h, x:x + w]
+            roi = cv2.resize(roi, FACE_SIZE)
+            face_samples.append(roi)
             ids.append(label)
 
     if not ids:
@@ -60,7 +67,9 @@ def main():
     print('\n[INFO] Training faces. Grab a coffee—this may take a bit...')
     faces, ids = get_images_and_labels(DATASET_DIR)
 
-    recognizer = cv2.face.LBPHFaceRecognizer_create(radius=2, neighbors=16, grid_x=8, grid_y=8)
+    # NOTE: Keep these parameters in sync with backend.attendance_core.run_recognition.
+    # Using neighbors=16 explodes histogram size (2^16 bins per cell) and creates multi-GB models.
+    recognizer = cv2.face.LBPHFaceRecognizer_create(radius=2, neighbors=8, grid_x=8, grid_y=8)
     recognizer.train(faces, np.array(ids))
     MODEL_PATH.parent.mkdir(exist_ok=True)
     recognizer.write(str(MODEL_PATH))

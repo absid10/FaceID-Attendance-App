@@ -12,6 +12,7 @@ CASCADE_PATH = ASSETS_DIR / 'haarcascade_frontalface_default.xml'
 USER_DETAILS_FILE = DATA_DIR / 'UserDetails.csv'
 SAMPLES_PER_USER = 80
 BLUR_THRESHOLD = 60.0  # Higher value => stricter sharpness requirement
+FACE_SIZE = (200, 200)
 
 
 def prompt_user_metadata():
@@ -97,6 +98,8 @@ def main():
             face_roi = enhanced[y:y + h, x:x + w]
             if not is_frame_sharp(face_roi):
                 continue
+
+            face_roi = cv2.resize(face_roi, FACE_SIZE)
 
             count += 1
             file_path = DATASET_DIR / f'User.{face_id}.{count}.jpg'

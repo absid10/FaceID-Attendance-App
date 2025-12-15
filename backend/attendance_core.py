@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+from collections import Counter, deque
 import cv2
 import pandas as pd
+import math
 from datetime import datetime
 from pathlib import Path
 from typing import Callable, Dict, Tuple, cast
@@ -16,10 +18,26 @@ MODEL_PATH = MODELS_DIR / 'trainer.yml'
 USER_DETAILS_FILE = DATA_DIR / 'UserDetails.csv'
 ATTENDANCE_FILE = DATA_DIR / 'Attendance.csv'
 CLAHE = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
+FACE_SIZE = (200, 200)
 FaceMap = Dict[int, str]
 StatusCallback = Callable[[str], None]
 LogCallback = Callable[[str, str], None]
 USER_COLUMNS = ['Id', 'Name']
+
+
+def _lbph_match_quality(distance: float, threshold: float) -> float:
+    """Map LBPH distance (lower is better) into a 0-100 display value.
+
+    LBPH's `predict()` returns a distance-like score (lower is better), not a probability.
+    This mapping is calibrated to the current decision threshold:
+    - distance = 0      => 100%
+    - distance = threshold => ~50%
+    """
+
+    threshold = float(threshold) if threshold and threshold > 0 else 100.0
+    # exp(-ln(2) * d/t) gives 50% at d=t.
+    quality = 100.0 * math.exp(-math.log(2.0) * (float(distance) / threshold))
+    return max(0.0, min(100.0, quality))
 
 
 def load_user_records(raise_if_missing: bool = False) -> pd.DataFrame:
@@ -123,7 +141,11 @@ def run_recognition(
     *,
     camera_index: int = 0,
     session_seconds: int = 90,
-    min_confidence: float = 70.0,
+    # NOTE: OpenCV LBPH returns a distance-like score where LOWER is better.
+    # We treat any raw_conf <= min_confidence as a match.
+    min_confidence: float = 90.0,
+    stable_frames: int = 4,
+    stable_window: int = 8,
     stop_on_success: bool = True,
     display_window: bool = True,
     idle_hint_seconds: int = 20,
@@ -133,7 +155,8 @@ def run_recognition(
     user_map = load_user_details()
     attendance_df = load_attendance()
 
-    recognizer = cv2.face.LBPHFaceRecognizer_create()
+    # Keep parameters aligned with scripts/02_train_model.py.
+    recognizer = cv2.face.LBPHFaceRecognizer_create(radius=2, neighbors=8, grid_x=8, grid_y=8)
     recognizer.read(str(MODEL_PATH))
     face_cascade = cv2.CascadeClassifier(str(CASCADE_PATH))
 
@@ -158,6 +181,9 @@ def run_recognition(
     emit_status(last_status_msg)
 
     successful_log = False
+    # Smooth out per-frame jitter: require N consistent matches in the last M frames.
+    recent_matches: deque[int] = deque(maxlen=max(1, stable_window))
+    recent_distances: dict[int, deque[float]] = {}
 
     try:
         while (datetime.now() - start_time).total_seconds() < session_seconds:
@@ -177,29 +203,56 @@ def run_recognition(
 
             for (x, y, w, h) in faces:
                 roi = enhanced[y:y + h, x:x + w]
+                roi = cv2.resize(roi, FACE_SIZE)
                 label, raw_conf = recognizer.predict(roi)
-                confidence_pct = max(0.0, min(100.0, 100 - raw_conf))
+                raw_conf_f = float(raw_conf)
+                match_quality = _lbph_match_quality(raw_conf_f, min_confidence)
 
-                if raw_conf <= min_confidence and label in user_map:
+                # Track only plausible labels to stabilize decisions.
+                if label in user_map:
+                    recent_matches.append(label)
+                    if label not in recent_distances:
+                        recent_distances[label] = deque(maxlen=max(1, stable_window))
+                    recent_distances[label].append(raw_conf_f)
+
+                stable_label: int | None = None
+                stable_distance: float | None = None
+                if stable_frames > 1 and len(recent_matches) >= stable_frames:
+                    label_counts = Counter(recent_matches)
+                    candidate, count = label_counts.most_common(1)[0]
+                    if count >= stable_frames:
+                        distances = list(recent_distances.get(candidate, []))
+                        if distances:
+                            avg_dist = sum(distances) / len(distances)
+                            stable_label = candidate
+                            stable_distance = avg_dist
+
+                effective_label = stable_label if stable_label is not None else label
+                effective_distance = stable_distance if stable_distance is not None else raw_conf_f
+
+                if effective_distance <= min_confidence and effective_label in user_map:
                     attendance_df, logged, time_str = log_attendance_entry(
-                        label,
-                        user_map[label],
+                        effective_label,
+                        user_map[effective_label],
                         attendance_df,
                     )
                     if logged:
-                        emit_log(user_map[label], time_str)
-                        emit_status(f'Logged {user_map[label]} @ {time_str}')
+                        emit_log(user_map[effective_label], time_str)
+                        emit_status(f'Logged {user_map[effective_label]} @ {time_str}')
                         last_activity_time = datetime.now()
                         successful_log = True
                         if stop_on_success:
                             break
                     else:
-                        emit_status(f'{user_map[label]} already logged today.')
-                    name_to_draw = user_map[label]
+                        emit_status(f'{user_map[effective_label]} already logged today.')
+                    name_to_draw = user_map[effective_label]
                 else:
                     name_to_draw = 'Unknown'
-                    if label in user_map:
-                        emit_status(f'{user_map[label]} detected ({confidence_pct:.0f}% confidence). Need clearer view to log.')
+                    if effective_label in user_map:
+                        effective_quality = _lbph_match_quality(effective_distance, min_confidence)
+                        emit_status(
+                            f'{user_map[effective_label]} detected (match {effective_quality:.0f}%). Need clearer view to log.'
+                        )
                     else:
                         emit_status('Unknown face — enroll first or adjust lighting.')
 
@@ -207,7 +260,8 @@ def run_recognition(
                     cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
                     cv2.putText(frame, name_to_draw, (x + 5, y - 10),
                                 cv2.FONT_HERSHEY_SIMPLEX, 0.8, (255, 255, 255), 2)
-                    cv2.putText(frame, f'{confidence_pct:.0f}%', (x + 5, y + h - 10),
+                    # Show match quality for the current face box.
+                    cv2.putText(frame, f'{match_quality:.0f}%', (x + 5, y + h - 10),
                                 cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 255), 2)
 
             if display_window:
