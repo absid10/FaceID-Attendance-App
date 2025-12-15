@@ -1,0 +1,5 @@
+# Ensure GitHub Linguist counts SQL in language stats.
+# Linguist often treats `docs/**` as documentation and excludes it by default.
+
+*.sql linguist-detectable=true
+*.sql linguist-documentation=false
