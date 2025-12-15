@@ -715,6 +715,23 @@ class AttendanceApp(tk.Tk):
             return
         self.status_var.set('Launching enrollment window...')
         try:
+            face_id = prefill_id
+            face_name = (prefill_name or '').strip() if prefill_name else None
+
+            # When the app is packaged as an .exe we do not rely on console input.
+            if face_id is None:
+                face_id = simpledialog.askinteger(
+                    'Enroll New Face', 'Enter a numeric User ID:', minvalue=1
+                )
+            if not face_id:
+                return
+
+            if not face_name:
+                face_name = simpledialog.askstring('Enroll New Face', 'Enter User Name:')
+            if not face_name or not face_name.strip():
+                return
+            face_name = face_name.strip()
+
             if is_frozen():
                 cmd = [sys.executable, 'create-dataset']
             else:
@@ -725,14 +742,15 @@ class AttendanceApp(tk.Tk):
                     )
                     return
                 cmd = [sys.executable, str(script_path)]
-            if prefill_id is not None:
-                cmd.extend(['--id', str(prefill_id)])
-            if prefill_name:
-                cmd.extend(['--name', prefill_name])
+
+            cmd.extend(['--id', str(int(face_id))])
+            cmd.extend(['--name', str(face_name)])
+            cmd.extend(['--camera-index', str(int(self.settings.camera_index))])
             subprocess.Popen(['cmd.exe', '/c', 'start', '', *cmd])
             messagebox.showinfo(
                 'Enrollment Started',
-                'A new console window opened. Complete the capture and retrain the model.',
+                'The enrollment camera window will open in a moment.\n\n'
+                'Complete the capture and then click "Train Recognition Model".',
             )
         except Exception as exc:
             messagebox.showerror('Enrollment Error', str(exc))
@@ -761,7 +779,7 @@ class AttendanceApp(tk.Tk):
             subprocess.Popen(['cmd.exe', '/c', 'start', '', *cmd])
             messagebox.showinfo(
                 'Training Launched',
-                'A console window is running 02_train_model.py. Wait for it to finish before the next capture.',
+                'Training started. Wait for it to finish before the next capture.',
             )
         except Exception as exc:
             messagebox.showerror('Training Error', str(exc))

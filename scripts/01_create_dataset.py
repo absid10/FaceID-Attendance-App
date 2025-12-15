@@ -9,6 +9,7 @@ if str(ROOT_DIR) not in sys.path:
     sys.path.append(str(ROOT_DIR))
 
 from shared.paths import assets_dir, data_dir
+from shared.settings import load_settings
 from backend.storage import Storage
 
 DATA_DIR = data_dir()
@@ -60,7 +61,27 @@ def parse_args():
         default=SAMPLES_PER_USER,
         help='Number of samples to capture (default: 80).',
     )
+    parser.add_argument(
+        '--camera-index',
+        type=int,
+        default=None,
+        help='Camera index to use (default: from Settings, else 0).',
+    )
     return parser.parse_args()
+
+
+def _show_error(title: str, message: str) -> None:
+    # In packaged builds there may be no console. Use a GUI dialog as fallback.
+    try:
+        import tkinter as tk
+        from tkinter import messagebox
+
+        root = tk.Tk()
+        root.withdraw()
+        messagebox.showerror(title, message)
+        root.destroy()
+    except Exception:
+        print(f'[ERROR] {title}: {message}')
 
 
 def main():
@@ -75,7 +96,24 @@ def main():
         face_id, face_name = prompt_user_metadata()
     target_samples = args.samples if args.samples > 0 else SAMPLES_PER_USER
 
-    cam = cv2.VideoCapture(0)
+    settings = load_settings()
+    camera_index = settings.camera_index
+    if args.camera_index is not None:
+        camera_index = int(args.camera_index)
+
+    cam = cv2.VideoCapture(camera_index, cv2.CAP_DSHOW)
+    if not cam.isOpened():
+        # Fallback to default backend.
+        cam = cv2.VideoCapture(camera_index)
+    if not cam.isOpened():
+        _show_error(
+            'Camera Error',
+            f'Could not open the camera (index={camera_index}).\n\n'
+            'Fixes:\n'
+            '- Close Teams/Zoom/other apps using the webcam\n'
+            '- Change Camera Index in Settings and try again',
+        )
+        return
     cam.set(3, 640)
     cam.set(4, 480)
 
