@@ -4,14 +4,14 @@
 
 ### *Intelligent Face Recognition Attendance System*
 
-![Python](https://img.shields.io/badge/Python-3.10%2B-blue? logo=python&logoColor=white)
+![Python](https://img.shields.io/badge/Python-3.10%2B-blue?logo=python&logoColor=white)
 ![OpenCV](https://img.shields.io/badge/OpenCV-LBPH-critical?logo=opencv&logoColor=white)
 ![Tkinter](https://img.shields.io/badge/UI-Tkinter-green?logo=python&logoColor=white)
 ![License](https://img.shields.io/github/license/absid10/FaceID-Attendance-App)
 ![Downloads](https://img.shields.io/github/downloads/absid10/FaceID-Attendance-App/total)
 ![Release](https://img.shields.io/github/v/release/absid10/FaceID-Attendance-App)
 
-**A Python-based Face ID Attendance Application that uses facial recognition to automatically mark and manage attendance.  Capture faces via webcam, match them against a registered database, log check-in/check-out times, and export attendance reports.**
+**A Python-based Face ID Attendance Application that uses facial recognition to automatically mark and manage attendance. Capture faces via webcam, match them against a registered database, log check-in/check-out times, and export attendance reports.**
 
 [📥 Download](#-download) • [✨ Features](#-features) • [📖 Documentation](#-table-of-contents) • [🚀 Quick Start](#-quick-start-windows)
 
@@ -28,7 +28,7 @@
 **Latest Release:  v1.0.1**
 
 [![Download ZIP](https://img.shields.io/badge/Download-Windows_ZIP-0078D4?style=for-the-badge&logo=windows&logoColor=white)](https://github.com/absid10/FaceID-Attendance-App/releases/download/v1.0.1/FaceAttendance-v1.0.1-windows.zip)
-[![Download EXE](https://img.shields.io/badge/Download-Standalone_EXE-0078D4?style=for-the-badge&logo=windows&logoColor=white)](https://github.com/absid10/FaceID-Attendance-App/releases/download/v1.0.1/FaceAttendance. exe)
+[![Download EXE](https://img.shields.io/badge/Download-Standalone_EXE-0078D4?style=for-the-badge&logo=windows&logoColor=white)](https://github.com/absid10/FaceID-Attendance-App/releases/download/v1.0.1/FaceAttendance.exe)
 
 [![View All Releases](https://img.shields.io/badge/View-All_Releases-gray?style=for-the-badge&logo=github)](https://github.com/absid10/FaceID-Attendance-App/releases)
 
@@ -59,10 +59,22 @@ graph LR
 ```mermaid
 pie title "Language Composition"
     "Python" : 92
-    "SQL" : 4. 7
+    "SQL" : 4.7
     "PowerShell" : 2.2
     "Inno Setup" : 1.1
 ```
+
+---
+
+## 🖼️ App Preview
+
+Below are in-app screenshots of the console and live capture view:
+
+- Admin console with quick actions, model insights, and recent attendance  
+  ![image2](image2)
+
+- Live attendance capture with recognition bounding box and confidence  
+  ![image1](image1)
 
 ---
 
@@ -122,7 +134,7 @@ flowchart TD
 ```
 📦 Download FaceAttendance-v1.0.1-windows.zip
 📂 Extract to Desktop\FaceAttendance
-🖱️ Double-click FaceAttendance. exe
+🖱️ Double-click FaceAttendance.exe
 ```
 
 ### Step 2: Initial Setup
@@ -139,11 +151,11 @@ graph TD
     style F fill:#2196F3,color:#fff
 ```
 
-1. ✅ **Accept** the consent prompt
-2. ⚙️ **Open Settings** → Confirm Camera Index
-3. 👤 **Admin Console** → Enroll New Face
-4. 🧠 **Admin Console** → Train Recognition Model
-5. 📋 **Admin Console** → Log Attendance Session
+1. ✅ **Accept** the consent prompt  
+2. ⚙️ **Open Settings** → Confirm Camera Index  
+3. 👤 **Admin Console** → Enroll New Face  
+4. 🧠 **Admin Console** → Train Recognition Model  
+5. 📋 **Admin Console** → Log Attendance Session  
 
 > 💡 **Tip:** See [RUN_WINDOWS.txt](RUN_WINDOWS.txt) for detailed instructions
 
@@ -162,20 +174,20 @@ sequenceDiagram
     participant DB as 💾 Database
     
     U->>C: Stand in front of camera
-    C->>D:  Capture frame
+    C->>D: Capture frame
     D->>D: Detect face (Haar Cascade)
     D->>R: Extract face ROI (200x200)
     R->>R: Match against LBPH model
     R->>DB: Log attendance if confident
-    DB->>U: ✅ Attendance marked! 
+    DB->>U: ✅ Attendance marked!
 ```
 
 ### Data Flow
 
-1. **📸 Enroll**:  Capture face samples → `data/dataset/`
-2. **🧠 Train**: Build LBPH model → `models/trainer. yml`
-3. **🎯 Recognize**: Match faces → Log to SQLite
-4. **📊 Export**:  Generate CSV reports
+1. **📸 Enroll**: Capture face samples → `data/dataset/`  
+2. **🧠 Train**: Build LBPH model → `models/trainer.yml`  
+3. **🎯 Recognize**: Match faces → Log to SQLite  
+4. **📊 Export**: Generate CSV reports  
 
 ---
 
@@ -189,10 +201,10 @@ sequenceDiagram
 
 ```powershell
 # Create virtual environment
-py -3 -m venv . venv
+py -3 -m venv .venv
 
 # Activate environment
-.\. venv\Scripts\activate
+.\.venv\Scripts\activate
 
 # Install dependencies
 python -m pip install -r requirements.txt
@@ -204,7 +216,7 @@ python frontend/attendance_app.py
 ### Optional Manual Scripts
 ```powershell
 python scripts/01_create_dataset.py
-python scripts/02_train_model. py
+python scripts/02_train_model.py
 ```
 
 ---
@@ -238,11 +250,11 @@ FaceAttendance/
 
 ### 🔒 Privacy & Security
 
-- ✅ **100% Local Storage** - No cloud uploads
-- ✅ **Consent Required** - First-run privacy agreement
-- ✅ **Privacy Mode** - Disable enrollment/training
-- ⚠️ **Biometric Data** - Never commit face images to Git
-- 🔐 **Portable Mode** - Data stays with the EXE folder
+- ✅ **100% Local Storage** - No cloud uploads  
+- ✅ **Consent Required** - First-run privacy agreement  
+- ✅ **Privacy Mode** - Disable enrollment/training  
+- ⚠️ **Biometric Data** - Never commit face images to Git  
+- 🔐 **Portable Mode** - Data stays with the EXE folder  
 
 ---
 
@@ -263,7 +275,7 @@ FaceAttendance/
 ```powershell
 python frontend/attendance_app.py --kiosk
 ```
-**Output:** `release/FaceAttendance. exe`
+**Output:** `release/FaceAttendance.exe`
 
 ---
 
@@ -289,7 +301,7 @@ git push origin v1.0.2
 ```
 
 **Artifacts Generated:**
-- ✅ `FaceAttendance. exe`
+- ✅ `FaceAttendance.exe`
 - ✅ `FaceAttendance-v1.0.2-windows.zip`
 - ✅ `checksums.sha256`
 
@@ -314,7 +326,7 @@ FaceID-Attendance-App/
 ├── 🎨 assets/                # Haar cascade + resources
 ├── 💾 data/                  # Database + CSV templates
 ├── 🤖 models/                # Trained model output
-├── 🔧 . github/workflows/     # CI/CD automation
+├── 🔧 .github/workflows/     # CI/CD automation
 └── 📖 docs/                  # Documentation
 ```
 
@@ -324,7 +336,7 @@ FaceID-Attendance-App/
 <div align="center">
 
 ![GitHub stars](https://img.shields.io/github/stars/absid10/FaceID-Attendance-App?style=social)
-![GitHub forks](https://img.shields.io/github/forks/absid10/FaceID-Attendance-App? style=social)
+![GitHub forks](https://img.shields.io/github/forks/absid10/FaceID-Attendance-App?style=social)
 ![GitHub watchers](https://img.shields.io/github/watchers/absid10/FaceID-Attendance-App?style=social)
 
 </div>
@@ -332,7 +344,7 @@ FaceID-Attendance-App/
 ---
 ## 📄 License
 
-This project is open source.  See the [LICENSE](LICENSE) file for details.
+This project is open source. See the [LICENSE](LICENSE) file for details.
 
 ---
 
@@ -343,4 +355,3 @@ This project is open source.  See the [LICENSE](LICENSE) file for details.
 [⬆ Back to Top](#-faceid-attendance-app)
 
 </div>
-
