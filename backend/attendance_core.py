@@ -4,11 +4,13 @@ from collections import Counter, deque
 import cv2
 import pandas as pd
 import math
+import logging
 from datetime import datetime
-from pathlib import Path
 from typing import Callable, Dict, Tuple, cast
 
 from shared.paths import assets_dir, data_dir, models_dir
+from backend.storage import Storage
+from shared.logging_setup import configure_logging
 
 DATA_DIR = data_dir()
 ASSETS_DIR = assets_dir()
@@ -24,6 +26,10 @@ FaceMap = Dict[int, str]
 StatusCallback = Callable[[str], None]
 LogCallback = Callable[[str, str], None]
 USER_COLUMNS = ['Id', 'Name']
+
+
+_STORAGE = Storage()
+_STORAGE.migrate_from_csv_if_needed()
 
 
 def _lbph_match_quality(distance: float, threshold: float) -> float:
@@ -42,26 +48,10 @@ def _lbph_match_quality(distance: float, threshold: float) -> float:
 
 
 def load_user_records(raise_if_missing: bool = False) -> pd.DataFrame:
-    if not USER_DETAILS_FILE.exists():
-        if raise_if_missing:
-            raise FileNotFoundError('UserDetails.csv not found. Run 01_create_dataset.py first.')
-        return pd.DataFrame(columns=USER_COLUMNS)
-
-    df = pd.read_csv(USER_DETAILS_FILE)
-    if 'Id' not in df.columns or 'Name' not in df.columns:
-        raise ValueError('UserDetails.csv is missing required columns.')
-
-    df = df.reindex(columns=USER_COLUMNS).copy()
-    df['NumericId'] = pd.to_numeric(df['Id'], errors='coerce')
-    invalid_rows = df[df['NumericId'].isna()]
-    if not invalid_rows.empty:
-        dropped = ', '.join(invalid_rows['Id'].astype(str).tolist())
-        print(f"[WARN] Dropping invalid user IDs: {dropped}")
-    df = df.dropna(subset=['NumericId'])
-    df['Id'] = df['NumericId'].astype(int)
-    df['Name'] = df['Name'].fillna('').astype(str)
-    df = df.drop(columns=['NumericId'])
-    return df.reset_index(drop=True)
+    df = _STORAGE.users_df()
+    if df.empty and raise_if_missing:
+        raise FileNotFoundError('No users found. Enroll at least one user first.')
+    return df.reindex(columns=USER_COLUMNS).copy()
 
 
 def load_user_details() -> FaceMap:
@@ -74,29 +64,27 @@ def load_user_details() -> FaceMap:
 
 
 def load_attendance() -> pd.DataFrame:
+    df = _STORAGE.attendance_df()
     columns = ['Id', 'Name', 'Date', 'Time']
-    if ATTENDANCE_FILE.exists():
-        df = pd.read_csv(ATTENDANCE_FILE)
-        df = df.reindex(columns=columns, fill_value='')
-        df = df.dropna(how='all')
-        return df
-    return pd.DataFrame(columns=columns)
+    if df is None or getattr(df, 'empty', True):
+        return pd.DataFrame(columns=columns)
+    return df.reindex(columns=columns, fill_value='')
 
 
 def _persist_attendance(df: pd.DataFrame) -> None:
-    df.to_csv(ATTENDANCE_FILE, index=False)
+    # CSV is no longer the primary store; keep a best-effort export for compatibility.
+    try:
+        df.to_csv(ATTENDANCE_FILE, index=False)
+    except Exception:
+        pass
 
 
 def delete_user_profile(user_id: int) -> dict[str, int]:
     df = load_user_records(raise_if_missing=True)
-    if df.empty:
-        raise ValueError('No users available to delete.')
-
     if user_id not in df['Id'].values:
         raise ValueError(f'User ID {user_id} not found.')
 
-    updated_df = df[df['Id'] != user_id]
-    updated_df.to_csv(USER_DETAILS_FILE, index=False)
+    _STORAGE.delete_user(user_id)
 
     samples_removed = 0
     if DATASET_DIR.exists():
@@ -114,28 +102,18 @@ def log_attendance_entry(
     user_id: int,
     user_name: str,
     attendance_df: pd.DataFrame,
+    *,
+    min_minutes_between_logs: int = 10,
 ) -> Tuple[pd.DataFrame, bool, str]:
-    now = datetime.now()
-    date_str = now.strftime('%Y-%m-%d')
-    time_str = now.strftime('%H:%M:%S')
-
-    duplicate = (
-        (attendance_df['Id'] == user_id) &
-        (attendance_df['Date'] == date_str)
+    result = _STORAGE.log_attendance(
+        user_id=user_id,
+        user_name=user_name,
+        min_minutes_between_logs=int(min_minutes_between_logs),
+        enforce_one_per_day=True,
     )
-    if duplicate.any():
-        return attendance_df, False, time_str
-
-    new_entry = pd.DataFrame([{
-        'Id': user_id,
-        'Name': user_name,
-        'Date': date_str,
-        'Time': time_str,
-    }])
-
-    updated = pd.concat([attendance_df, new_entry], ignore_index=True)
+    updated = load_attendance()
     _persist_attendance(updated)
-    return updated, True, time_str
+    return updated, result.logged, result.time_str
 
 
 def run_recognition(
@@ -147,12 +125,22 @@ def run_recognition(
     min_confidence: float = 90.0,
     stable_frames: int = 4,
     stable_window: int = 8,
+    min_minutes_between_logs: int = 10,
     stop_on_success: bool = True,
     display_window: bool = True,
     idle_hint_seconds: int = 20,
     status_callback: StatusCallback | None = None,
     log_callback: LogCallback | None = None,
 ) -> None:
+    configure_logging()
+    logger = logging.getLogger(__name__)
+    logger.info(
+        'Recognition session start (camera_index=%s, session_seconds=%s, threshold=%s, dup_window_min=%s)',
+        camera_index,
+        session_seconds,
+        min_confidence,
+        min_minutes_between_logs,
+    )
     if not CASCADE_PATH.exists():
         raise FileNotFoundError(
             'Face cascade classifier is missing. Expected at: '
@@ -214,19 +202,17 @@ def run_recognition(
             ret, frame = cam.read()
             if not ret:
                 emit_status('Camera feed unavailable. Exiting...')
+                logger.warning('Camera feed unavailable')
                 break
 
             gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
             enhanced = CLAHE.apply(gray)
             faces = face_cascade.detectMultiScale(
-                enhanced,
-                scaleFactor=1.1,
-                minNeighbors=6,
-                minSize=(80, 80)
+                enhanced, scaleFactor=1.1, minNeighbors=6, minSize=(80, 80)
             )
 
-            for (x, y, w, h) in faces:
-                roi = enhanced[y:y + h, x:x + w]
+            for x, y, w, h in faces:
+                roi = enhanced[y : y + h, x : x + w]
                 roi = cv2.resize(roi, FACE_SIZE)
                 label, raw_conf = recognizer.predict(roi)
                 raw_conf_f = float(raw_conf)
@@ -259,7 +245,15 @@ def run_recognition(
                         effective_label,
                         user_map[effective_label],
                         attendance_df,
+                        min_minutes_between_logs=min_minutes_between_logs,
                     )
+                    if logged:
+                        logger.info(
+                            'Logged attendance: id=%s name=%s time=%s',
+                            effective_label,
+                            user_map[effective_label],
+                            time_str,
+                        )
                     if logged:
                         emit_log(user_map[effective_label], time_str)
                         emit_status(f'Logged {user_map[effective_label]} @ {time_str}')
@@ -282,39 +276,64 @@ def run_recognition(
 
                 if display_window:
                     cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
-                    cv2.putText(frame, name_to_draw, (x + 5, y - 10),
-                                cv2.FONT_HERSHEY_SIMPLEX, 0.8, (255, 255, 255), 2)
+                    cv2.putText(
+                        frame,
+                        name_to_draw,
+                        (x + 5, y - 10),
+                        cv2.FONT_HERSHEY_SIMPLEX,
+                        0.8,
+                        (255, 255, 255),
+                        2,
+                    )
                     # Show match quality for the current face box.
-                    cv2.putText(frame, f'{match_quality:.0f}%', (x + 5, y + h - 10),
-                                cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 255), 2)
+                    cv2.putText(
+                        frame,
+                        f'{match_quality:.0f}%',
+                        (x + 5, y + h - 10),
+                        cv2.FONT_HERSHEY_SIMPLEX,
+                        0.6,
+                        (0, 255, 255),
+                        2,
+                    )
 
             if display_window:
                 idle_seconds = (datetime.now() - last_activity_time).total_seconds()
-                if idle_hint_seconds > 0 and idle_seconds > idle_hint_seconds and not successful_log:
+                if (
+                    idle_hint_seconds > 0
+                    and idle_seconds > idle_hint_seconds
+                    and not successful_log
+                ):
                     hint_text = 'No log yet — adjust pose or press Q to exit.'
                 else:
                     hint_text = 'Press ESC or Q to exit at any time.'
 
                 frame_height, frame_width = frame.shape[:2]
                 overlay_height = 70
-                cv2.rectangle(frame,
-                              (0, frame_height - overlay_height),
-                              (frame_width, frame_height),
-                              (12, 20, 40), -1)
-                cv2.putText(frame,
-                            last_status_msg[:64],
-                            (12, frame_height - overlay_height + 28),
-                            cv2.FONT_HERSHEY_SIMPLEX,
-                            0.6,
-                            (255, 255, 255),
-                            1)
-                cv2.putText(frame,
-                            hint_text,
-                            (12, frame_height - 18),
-                            cv2.FONT_HERSHEY_SIMPLEX,
-                            0.55,
-                            (56, 189, 248),
-                            1)
+                cv2.rectangle(
+                    frame,
+                    (0, frame_height - overlay_height),
+                    (frame_width, frame_height),
+                    (12, 20, 40),
+                    -1,
+                )
+                cv2.putText(
+                    frame,
+                    last_status_msg[:64],
+                    (12, frame_height - overlay_height + 28),
+                    cv2.FONT_HERSHEY_SIMPLEX,
+                    0.6,
+                    (255, 255, 255),
+                    1,
+                )
+                cv2.putText(
+                    frame,
+                    hint_text,
+                    (12, frame_height - 18),
+                    cv2.FONT_HERSHEY_SIMPLEX,
+                    0.55,
+                    (56, 189, 248),
+                    1,
+                )
 
                 cv2.imshow('Attendance Camera', frame)
                 key = cv2.waitKey(10) & 0xFF

@@ -54,10 +54,10 @@ The app combines OpenCV (Haar Cascade + LBPH) with a Tkinter control panel to st
 - Camera overlay with live status and match-quality readout.
 
 ## Data Flow
-1. **Enrollment request** captured inside the UI and logged to `data/EnrollmentRequests.csv`.
-2. **Dataset capture** (`scripts/01_create_dataset.py`) collects samples as `data/dataset/User.<user_id>.<n>.jpg`.
-3. **Model training** (`scripts/02_train_model.py`) refreshes `models/trainer.yml` via LBPH.
-4. **Recognition session** reads frames from the webcam and logs outcomes into `data/Attendance.csv`.
+1. **Enrollment request** captured inside the UI and stored in `data/attendance.sqlite3`.
+2. **Dataset capture** (`scripts/01_create_dataset.py`) collects samples as `data/dataset/User.<user_id>.<n>.jpg` (local-only).
+3. **Model training** (`scripts/02_train_model.py`) refreshes `models/trainer.yml` via LBPH (local-only).
+4. **Recognition session** reads frames from the webcam and logs outcomes into SQLite; CSV export remains available for reports.
 
 ## Quick Start
 ```powershell
@@ -84,8 +84,20 @@ python frontend/attendance_app.py
 If you just want to run the app (no Python required), download the latest prebuilt executable from the repository **Releases** page and run it.
 
 Notes:
-- The `.exe` creates `data/` and `models/` folders next to itself on first run.
+- If the `.exe` folder is writable (portable run), it writes `data/` + `models/` next to itself.
+- If installed under a protected folder (like Program Files), it falls back to `%LOCALAPPDATA%\FaceAttendance`.
 - This repo does **not** publish real face datasets or trained models in git history. Use Releases for binaries.
+
+## Settings & Calibration
+Open **Settings** in the sidebar to configure:
+- Camera index
+- Session duration
+- LBPH threshold (higher = more tolerant matches)
+- Duplicate window (minutes) to prevent multiple logs in a short period
+- Privacy Mode (disables enrollment/training)
+
+Kiosk mode:
+- Launch with `--kiosk` to hide the Admin Console button.
 
 ## Build a Windows `.exe` (PyInstaller)
 This produces a distributable Windows build. When run as an `.exe`, the app writes `data/` and `models/` next to the executable (so it can run from any folder).
@@ -112,6 +124,17 @@ Notes:
 
 Publishing tip (GitHub): build locally, then upload `dist\\FaceAttendance.exe` as a Release asset.
 
+### Automated Releases (GitHub Actions)
+This repo includes a workflow that builds and attaches `release/FaceAttendance.exe` automatically when you push a tag.
+
+Example:
+```powershell
+git tag v1.0.0
+git push origin v1.0.0
+```
+
+The Release asset will appear under the GitHub **Releases** page.
+
 | Requirement | Notes |
 | --- | --- |
 | Python | 3.10+ recommended |
@@ -135,9 +158,16 @@ Publishing tip (GitHub): build locally, then upload `dist\\FaceAttendance.exe` a
 | `scripts/02_train_model.py` | Trains LBPH and writes `models/trainer.yml`. |
 
 ## Data & Models
-- `data/Attendance.csv`, `data/UserDetails.csv`, `data/EnrollmentRequests.csv`: CSV storage used by the app.
+- `data/attendance.sqlite3`: primary storage for users, attendance, and enrollment requests.
+- `data/Attendance.csv`, `data/UserDetails.csv`, `data/EnrollmentRequests.csv`: legacy CSV compatibility / templates (not the source of truth).
 - `data/dataset/`: raw grayscale face crops (local-only).
 - `models/trainer.yml`: LBPH model (local-only). Regenerate after dataset changes.
+
+## Reports
+Admins can export daily/weekly/monthly CSV reports from the Admin Console.
+
+## Logging
+The app writes logs to `logs/faceattendance.log` under the runtime directory (next to the exe for portable runs, otherwise under LocalAppData).
 
 Privacy:
 - Do **not** commit real face images or trained models to git.

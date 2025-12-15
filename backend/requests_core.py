@@ -1,11 +1,11 @@
 from __future__ import annotations
 
 import pandas as pd
-from datetime import datetime
 
-from shared.paths import data_dir
+from backend.storage import Storage
 
-REQUESTS_FILE = data_dir() / 'EnrollmentRequests.csv'
+_STORAGE = Storage()
+_STORAGE.migrate_from_csv_if_needed()
 COLUMNS = ['RequestId', 'Name', 'Contact', 'Message', 'Timestamp', 'Status']
 
 
@@ -29,45 +29,18 @@ def _normalize(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def load_requests() -> pd.DataFrame:
-    if REQUESTS_FILE.exists():
-        df = pd.read_csv(REQUESTS_FILE)
-        return _normalize(df)
-    return pd.DataFrame(columns=COLUMNS)
+    df = _STORAGE.requests_df()
+    return _normalize(df)
 
 
 def save_requests(df: pd.DataFrame) -> None:
-    df.to_csv(REQUESTS_FILE, index=False)
+    # Requests are stored in SQLite; CSV is not the source of truth.
+    return
 
 
 def add_request(name: str, contact: str, message: str) -> None:
-    name = name.strip()
-    contact = contact.strip()
-    message = message.strip()
-    if not name:
-        raise ValueError('Name is required.')
-    if not contact:
-        raise ValueError('Contact info is required.')
-    if not message:
-        raise ValueError('Please describe your request.')
-
-    df = load_requests()
-    next_id = int(df['RequestId'].max()) + 1 if not df.empty else 1
-    new_row = pd.DataFrame([{
-        'RequestId': next_id,
-        'Name': name,
-        'Contact': contact,
-        'Message': message,
-        'Timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
-        'Status': 'Pending',
-    }])
-    df = pd.concat([df, new_row], ignore_index=True)
-    save_requests(df)
+    _STORAGE.add_request(name=name, contact=contact, message=message)
 
 
 def update_request_status(request_id: int, status: str) -> None:
-    df = load_requests()
-    mask = df['RequestId'] == request_id
-    if not mask.any():
-        raise ValueError(f'Request ID {request_id} not found.')
-    df.loc[mask, 'Status'] = status
-    save_requests(df)
+    _STORAGE.update_request_status(request_id, status)

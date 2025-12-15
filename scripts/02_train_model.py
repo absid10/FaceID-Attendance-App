@@ -44,10 +44,7 @@ def get_images_and_labels(dataset_dir: Path):
             continue
 
         faces = detector.detectMultiScale(
-            enhanced,
-            scaleFactor=1.1,
-            minNeighbors=6,
-            minSize=(80, 80)
+            enhanced, scaleFactor=1.1, minNeighbors=6, minSize=(80, 80)
         )
 
         # Most dataset images are already cropped face ROIs.
@@ -56,8 +53,8 @@ def get_images_and_labels(dataset_dir: Path):
             h, w = enhanced.shape[:2]
             faces = [(0, 0, w, h)]
 
-        for (x, y, w, h) in faces:
-            roi = enhanced[y:y + h, x:x + w]
+        for x, y, w, h in faces:
+            roi = enhanced[y : y + h, x : x + w]
             roi = cv2.resize(roi, FACE_SIZE)
             face_samples.append(roi)
             ids.append(label)
